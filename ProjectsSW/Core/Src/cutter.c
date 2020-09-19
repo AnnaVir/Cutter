@@ -737,6 +737,9 @@ uint8_t Get_Direction_and_Diff()
 	return 0;
 }
 
+uint8_t debug = 0;
+uint8_t pressed_count = 0;
+
 void Collects_Digits(int8_t coord_name)
 {
 	char data = 0;
@@ -745,8 +748,19 @@ void Collects_Digits(int8_t coord_name)
 		data = Read_Keypad_Buffer(keypad_buffer);
 	}
 
+	if (data == 'B')
+	{
+		if  (pressed_count == 0)
+		{
+			Write_LCD_Buffer((char*)"                    ", LCD_ROW_SIZE, ROW_3);
+			Write_LCD_Buffer((char*) " *-Edit #-Cut C-Cal ", LCD_ROW_SIZE, ROW_4);
+			mode = SELECT;
+		}
+	}
+
 	//if gets number
 	if (data >= '0' && data <= '9') {
+		pressed_count++;
 		if (number_accept_count == 0) {
 			uint8_t all_zero = 0;
 			if (data == '0') {
@@ -790,6 +804,7 @@ void Collects_Digits(int8_t coord_name)
 
 	//if gets * to delete digit
 	} else if (data == '*') {
+		pressed_count++;
 		if (number_accept_count == 0) {
 			if (coord_size > 0) {
 				coord_size--;
@@ -827,6 +842,7 @@ void Collects_Digits(int8_t coord_name)
 	}
 
 	if (data == '#') {
+		pressed_count++;
 		number_accept_count++;
 		if (number_accept_count == 1) {
 			Reset_LCD_Pointers();
@@ -854,8 +870,10 @@ void Collects_Digits(int8_t coord_name)
 
 					if (set_coord < LIMIT_DOWN) {
 						Write_LCD_Buffer((char*)"Min", 3, 0xCE);
+						set_coord = LIMIT_DOWN;
 					} else if (set_coord > SOFT_LIMIT_UP) {
 						Write_LCD_Buffer((char*)"Max", 3, 0xCE);
+						set_coord = SOFT_LIMIT_UP;
 					}
 					is_limited_number = 1;
 					char temp_array[7];
@@ -889,8 +907,10 @@ void Collects_Digits(int8_t coord_name)
 
 					if (real_coord < LIMIT_DOWN) {
 						Write_LCD_Buffer((char*)"Min", 3, 0x8E);
+						real_coord = LIMIT_DOWN;
 					} else if (real_coord > SOFT_LIMIT_UP) {
 						Write_LCD_Buffer((char*)"Max", 3, 0x8E);
+						real_coord = SOFT_LIMIT_UP;
 					}
 					is_limited_number = 1;
 					char temp_array[7];
@@ -973,6 +993,8 @@ uint8_t Get_Coord_Size(char* coord_arr, double coord)
   * @param	None
   * @retval None
   */
+//uint8_t debug = 0;
+
 void Check_Pressed_Key()
 {
 	char data = 0;
@@ -985,8 +1007,9 @@ void Check_Pressed_Key()
 			Write_LCD_Buffer((char*)"00000", COORD_SIZE, S_COORD_POS);
 			Write_LCD_Buffer((char*)"     Edit Mode      ", LCD_ROW_SIZE, ROW_4);
 			memset(coord_array, '0', COORD_SIZE);
-			set_coord = 0;
-			coord_size = 0;
+			//set_coord = 0;
+			//coord_size = 0;
+			coord_size = Get_Coord_Size(coord_array, set_coord);
 			number_accept_count = 0;
 			//Goes to edit mode
 			mode = EDIT;
@@ -1695,12 +1718,14 @@ void state_machine()
 {
 	switch(mode)
 	{
+
 		case SELECT:
 		{
 			if (keypad_timeout == KEYPAD_TIMEOUT) {
 				keypad_timeout = 0;
 				Read_Keypad();
 			}
+			pressed_count = 0;
 			Check_Pressed_Key();
 			break;
 		}
