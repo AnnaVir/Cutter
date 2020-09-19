@@ -691,7 +691,7 @@ uint32_t set_tick = 0;
 
 uint8_t Get_Direction_and_Diff()
 {
-	set_tick = set_coord * ONE_ROTATION_TICK / ONE_ROTATION_VAL;
+	set_tick = (double)set_coord * ONE_ROTATION_TICK / ONE_ROTATION_VAL;
 
 	if ((encoder_value >= HARD_LIMIT_UP_IN_TICK) || (encoder_value <= LIMIT_DOWN_IN_TICK)) {
 		return 1;
@@ -932,7 +932,7 @@ void Collects_Digits(int8_t coord_name)
 				Print_Coord(set_coord, SET);
 				Write_LCD_Buffer((char*)"                    ", LCD_ROW_SIZE, ROW_3);
 				Write_LCD_Buffer((char*) " *-Edit #-Cut C-Cal ", LCD_ROW_SIZE, ROW_4);
-				encoder_value = real_coord * ONE_ROTATION_VAL / ONE_ROTATION_TICK;
+				encoder_value = (double)real_coord * ONE_ROTATION_VAL / ONE_ROTATION_TICK;
 				Save_Coord(encoder_value);
 				//Goes to Select Mode
 				mode = SELECT;
@@ -1613,17 +1613,27 @@ void Check_Pedal()
 void Print_Coord(double r_coord, uint8_t coord_name)
 {
 	char temp_buf[10];
+	char temp_buf_enc[7];
 	sprintf(temp_buf, "%6.1f", r_coord);
+	sprintf(temp_buf_enc, "%ld", encoder_value);
 
 	for (int i = 0; i < sizeof(temp_buf); ++i) {
 	  if (temp_buf[i] == 0x20) {
 		  temp_buf[i] = '0';
 	  }
 	}
+
+	for (int i = 0; i < sizeof(temp_buf_enc); ++i) {
+	  if (temp_buf_enc[i] == 0) {
+		  temp_buf_enc[i] = 0x20;
+	  }
+	}
+
 	Reset_LCD_Pointers();
 	if (coord_name == REAL) {
 		Write_LCD_Buffer((char*)"Real  ", sizeof("Real  "), ROW_1);
 		Write_LCD_Buffer(temp_buf, COORD_SIZE_WITH_POINT, R_COORD_POS);
+		Write_LCD_Buffer(temp_buf_enc, 7, ROW_4);
 	} else {
 		Write_LCD_Buffer((char*)"Set   ", sizeof("Set   "), ROW_2);
 		Write_LCD_Buffer(temp_buf, COORD_SIZE_WITH_POINT, S_COORD_POS);

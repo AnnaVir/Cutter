@@ -13,7 +13,7 @@
 //#define TEST
 
 #define LCD_ROW_SIZE	20 //20x4
-#define LCD_BUF_SIZE	64
+#define LCD_BUF_SIZE	100
 #define LCD_ADDR		(0x27 << 1)
 #define LCD_DELAY_MS	5
 #define LCD_TIMEOUT		10
