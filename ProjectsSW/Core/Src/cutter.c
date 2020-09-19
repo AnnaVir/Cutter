@@ -1226,6 +1226,11 @@ void Move_Brush()
 		{
 			while(encoder_value > set_tick)
 			{
+				//if there is no power, save coordinate
+				if (HAL_GPIO_ReadPin(Power_In_GPIO_Port, Power_In_Pin) == 0)
+				{
+					Save_Coord(encoder_value);
+				}
 				if ((encoder_value >= HARD_LIMIT_UP_IN_TICK) || (encoder_value <= LIMIT_DOWN_IN_TICK))
 				{
 					break;
@@ -1238,6 +1243,12 @@ void Move_Brush()
 
 		/*while (encoder_value < set_tick)
 		{
+			//if there is no power, save coordinate
+			if (HAL_GPIO_ReadPin(Power_In_GPIO_Port, Power_In_Pin) == 0)
+			{
+				Save_Coord(encoder_value);
+			}
+
 			if ((encoder_value >= HARD_LIMIT_UP_IN_TICK) || (encoder_value <= LIMIT_DOWN_IN_TICK))
 			{
 				break;
