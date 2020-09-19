@@ -1612,6 +1612,12 @@ void Check_Hand_Catch()
 	if (input_state.hand_catch_is_pressed == 1) {
 		hand_catch_detected = 1;
 
+		//if there is no power, save coordinate
+		if (HAL_GPIO_ReadPin(Power_In_GPIO_Port, Power_In_Pin) == 0)
+		{
+			Save_Coord(encoder_value);
+		}
+
 		if (print_real_coord_time == TIMEOUT_PRINT_REAL) {
 			print_real_coord_time = 0;
 			real_coord = (double)encoder_value * ONE_ROTATION_VAL / ONE_ROTATION_TICK;
