@@ -71,25 +71,30 @@
 #define RAMP_UP_VAL		20
 #define RAMP_DOWN_VAL	20
 
-#define	ONE_ROTATION_VAL	(double)11.962
+#define	ONE_ROTATION_VAL	(double)11.962	//mm
+#define ONE_ROTATION_TICK	1000
 
 #define	MAX_DAC_VALUE				2200
-#define MIN_SPEED					1500
+#define MIN_SPEED					1400
 
 #define SOFT_LIMIT_UP				1050	//mm
 #define HARD_LIMIT_UP				1056	//mm
 #define LIMIT_DOWN					95		//mm
 
-#define MIN_DISTANCE				(100*1000/ONE_ROTATION_VAL)
+#define HARD_LIMIT_UP_IN_TICK			(HARD_LIMIT_UP * ONE_ROTATION_TICK / ONE_ROTATION_VAL)
+#define LIMIT_DOWN_IN_TICK				(LIMIT_DOWN * ONE_ROTATION_TICK / ONE_ROTATION_VAL)
 
-#define ENC_VAL_FOR_RAMP_DOWN		1500
+#define MIN_DISTANCE						100 //mm
+#define MIN_DISTANCE_IN_TICK				(MIN_DISTANCE * ONE_ROTATION_TICK / ONE_ROTATION_VAL)
+
+#define TICK_FOR_RAMP_DOWN			2000
 #define INTERVAL_FOR_RAMP			3000	//3second
 #define TIME_FOR_CHANGE_RAMP		10
 
 #define TIMEOUT_PRINT_REAL			1000
 
-#define HARD_LIMIT_UP_IN_TICK			(1056*1000/ONE_ROTATION_VAL)
-#define LIMIT_DOWN_IN_TICK				(95*1000/ONE_ROTATION_VAL)
+#define GO_OVER					5 //mm
+#define GO_OVER_IN_TICK			(GO_OVER * ONE_ROTATION_TICK / ONE_ROTATION_VAL)
 
 typedef enum {
 	SELECT,
@@ -122,6 +127,7 @@ void Read_Pin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, uint8_t * st0_counter,
 					uint8_t * st1_counter, uint8_t * is_pressed, uint8_t on_state);
 void Read_Inputs(void);
 void Print_Coord(double r_coord, uint8_t coord_name);
+void Print_Current_Coord();
 void state_machine(void);
 void Main_Task(void);
 

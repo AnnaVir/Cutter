@@ -691,7 +691,7 @@ uint32_t set_tick = 0;
 
 uint8_t Get_Direction_and_Diff()
 {
-	set_tick = (float)set_coord * 1000 / ONE_ROTATION_VAL;
+	set_tick = set_coord * ONE_ROTATION_TICK / ONE_ROTATION_VAL;
 
 	if ((encoder_value >= HARD_LIMIT_UP_IN_TICK) || (encoder_value <= LIMIT_DOWN_IN_TICK)) {
 		return 1;
@@ -706,18 +706,18 @@ uint8_t Get_Direction_and_Diff()
 		return 1;
 	}
 
-	if (abs(set_tick - encoder_value) < 5)
+	int32_t tick_diff = encoder_value - set_tick;
+
+	if (abs(tick_diff) < 5)
 	{
 		return 1;
 	}
-
-	int32_t tick_diff = encoder_value - set_tick;
 
 	/*//Gets difference between real and set coordinates
 	coord_diff = real_coord - set_coord;
 	double _round = fabs(coord_diff);
 	//Calculates encoder value for coordinate difference
-	encoder_diff = roundf((double)(_round*1000)/ONE_ROTATION_VAL); //1000 value - 12mm
+	encoder_diff = roundf((double)(_round*ONE_ROTATION_TICK)/ONE_ROTATION_VAL); //1000 value - 12mm
 	initial_coord = real_coord;*/
 
 	//Defines direction
@@ -727,7 +727,7 @@ uint8_t Get_Direction_and_Diff()
 		direction = BACK;
 	}
 
-	if (tick_diff <= MIN_DISTANCE) {
+	if (tick_diff <= MIN_DISTANCE_IN_TICK) {
 		speed = MIN_SPEED;
 		is_min_speed = 1;
 	} else {
@@ -912,7 +912,7 @@ void Collects_Digits(int8_t coord_name)
 				Print_Coord(set_coord, SET);
 				Write_LCD_Buffer((char*)"                    ", LCD_ROW_SIZE, ROW_3);
 				Write_LCD_Buffer((char*) " *-Edit #-Cut C-Cal ", LCD_ROW_SIZE, ROW_4);
-				encoder_value = (float)real_coord * ONE_ROTATION_VAL / 1000;
+				encoder_value = real_coord * ONE_ROTATION_VAL / ONE_ROTATION_TICK;
 				Save_Coord(encoder_value);
 				//Goes to Select Mode
 				mode = SELECT;
@@ -1056,7 +1056,7 @@ void Change_Speed(uint16_t *sp, uint8_t ramp)
 			}
 		}
 	} else if (ramp == RAMP_DOWN) {
-		if (*sp >= (1600 + RAMP_DOWN_VAL)) {   // /400 er
+		if (*sp >= (MIN_SPEED + RAMP_DOWN_VAL)) {
 			*sp = *sp - RAMP_DOWN_VAL;
 			//if (*speed < 0) {
 			//	*speed = 0;
@@ -1100,7 +1100,7 @@ void Save_Coord(uint32_t coord)
 	 * Write value to the Backup Register
 	 * Lock the backup register
 	 */
-	//double f_coord = coord * 1000;
+	//double f_coord = coord * ONE_ROTATION_TICK;
 	//uint32_t r_coord = f_coord;
 
 	/*set the DBP bit the Power Control
@@ -1142,24 +1142,19 @@ uint32_t Read_Coord()
 	return data;
 }
 
-uint8_t Check_Arrange_Out()
+void Print_Current_Coord()
 {
-	real_coord = (float)encoder_value * ONE_ROTATION_VAL / 1000;
-
 	if (print_real_coord_time == TIMEOUT_PRINT_REAL) {
 		print_real_coord_time = 0;
+		real_coord = (double)encoder_value * ONE_ROTATION_VAL / ONE_ROTATION_TICK;
 		Reset_LCD_Pointers();
 		Print_Coord(real_coord, REAL);
 	}
 
-	lcd_write();
-
-	if ((encoder_value >= HARD_LIMIT_UP_IN_TICK) || (encoder_value <= LIMIT_DOWN_IN_TICK)) {
-		Set_Inverter(STOP, 0);
-		Brush_Lock();
-		return 1;
+	if (lcd_timeout == LCD_TIMEOUT) {
+		lcd_timeout = 0;
+		LCD_Write(LCD_ADDR);
 	}
-	return 0;
 }
 
 /**
@@ -1168,9 +1163,9 @@ uint8_t Check_Arrange_Out()
   * @param	None
   * @retval None
   */
-int32_t encoder1 = 0;
-int32_t encoder2 = 0;
-int32_t encoder3 = 0;
+//int32_t encoder1 = 0;
+//int32_t encoder2 = 0;
+//int32_t encoder3 = 0;
 
 void Move_Brush()
 {
@@ -1182,47 +1177,13 @@ void Move_Brush()
 	timeout_for_ramp = 0;
 	time_for_change_ramp = 0;
 
-	if (direction == FORWARD)
+	if (direction == FORWARD) //tesoghakan dashtic hervanum e ays depqum
 	{
-		while (encoder_value < set_tick)
+		while (encoder_value < (set_tick + GO_OVER_IN_TICK))
 		{
-			if (Check_Arrange_Out() == 1)
+			if ((encoder_value >= HARD_LIMIT_UP_IN_TICK) || (encoder_value <= LIMIT_DOWN_IN_TICK))
 			{
-				break;
-			}
-
-			if (is_min_speed == 0)
-			{
-				is_move = 1;
-				if (encoder_value < set_tick - ENC_VAL_FOR_RAMP_DOWN)
-				{
-					ramp = RAMP_UP;
-				} else
-				{
-					ramp = RAMP_DOWN;
-				}
-
-				if (ramp != old_ramp && ramp == RAMP_DOWN)
-				{
-					timeout_for_ramp = 0;
-					time_for_change_ramp = 0;
-				}
-				old_ramp = ramp;
-
-				if (timeout_for_ramp < INTERVAL_FOR_RAMP && time_for_change_ramp == TIME_FOR_CHANGE_RAMP){
-					time_for_change_ramp = 0;
-					Change_Speed(&speed, ramp);
-				}
-			}
-			//TODO
-			Set_Inverter(FORWARD, speed);
-		}
-
-
-		/*while (encoder_value < set_tick + ENC_VAL_FOR_RAMP_DOWN)
-		{
-			if (Check_Arrange_Out() == 1)
-			{
+				arrange_out = 1;
 				break;
 			}
 
@@ -1237,39 +1198,42 @@ void Move_Brush()
 					ramp = RAMP_DOWN;
 				}
 
-				if (ramp != old_ramp && ramp == RAMP_DOWN)
+				if ((ramp != old_ramp) && (ramp == RAMP_DOWN))
 				{
 					timeout_for_ramp = 0;
 					time_for_change_ramp = 0;
 				}
 				old_ramp = ramp;
 
-				if (timeout_for_ramp < INTERVAL_FOR_RAMP && time_for_change_ramp == TIME_FOR_CHANGE_RAMP){
+				if ((timeout_for_ramp < INTERVAL_FOR_RAMP) && (time_for_change_ramp == TIME_FOR_CHANGE_RAMP))
+				{
 					time_for_change_ramp = 0;
 					Change_Speed(&speed, ramp);
 				}
 			}
 			Set_Inverter(FORWARD, speed);
+			Print_Current_Coord();	//print current real coord
 		}
 
-		Set_Inverter(STOP, 0);
+		Set_Inverter(STOP, 0);	//TODO	speed should be 0???
 
 		if (arrange_out == 0)
 		{
-			while(encoder_value > set_tick) {
-				if (Check_Arrange_Out() == 1) {
+			while(encoder_value > set_tick)
+			{
+				if ((encoder_value >= HARD_LIMIT_UP_IN_TICK) || (encoder_value <= LIMIT_DOWN_IN_TICK))
+				{
 					break;
 				}
 				Set_Inverter(BACK, speed);
+				Print_Current_Coord();
 			}
-		}*/
+		}
 
 
-	} else if (direction == BACK)
-	{
-		while (encoder_value > set_tick)
+		/*while (encoder_value < set_tick)
 		{
-			if (Check_Arrange_Out() == 1)
+			if ((encoder_value >= HARD_LIMIT_UP_IN_TICK) || (encoder_value <= LIMIT_DOWN_IN_TICK))
 			{
 				break;
 			}
@@ -1277,7 +1241,7 @@ void Move_Brush()
 			if (is_min_speed == 0)
 			{
 				is_move = 1;
-				if (encoder_value > set_tick + ENC_VAL_FOR_RAMP_DOWN)
+				if (encoder_value < (set_tick - ENC_VAL_FOR_RAMP_DOWN))
 				{
 					ramp = RAMP_UP;
 				} else
@@ -1285,22 +1249,68 @@ void Move_Brush()
 					ramp = RAMP_DOWN;
 				}
 
-				if (ramp != old_ramp && ramp == RAMP_DOWN)
+				if ((ramp != old_ramp) && (ramp == RAMP_DOWN))
 				{
 					timeout_for_ramp = 0;
 					time_for_change_ramp = 0;
 				}
 				old_ramp = ramp;
 
-				if (timeout_for_ramp < INTERVAL_FOR_RAMP && time_for_change_ramp == TIME_FOR_CHANGE_RAMP){
+				if ((timeout_for_ramp < INTERVAL_FOR_RAMP) && (time_for_change_ramp == TIME_FOR_CHANGE_RAMP))
+				{
 					time_for_change_ramp = 0;
 					Change_Speed(&speed, ramp);
 				}
 			}
-			//TODO save coord??????????????
+			//TODO
+			Set_Inverter(FORWARD, speed);
+			Print_Current_Coord();
+		}*/
+
+
+
+	} else if (direction == BACK)
+	{
+		while (encoder_value > set_tick)
+		{
+			if ((encoder_value >= HARD_LIMIT_UP_IN_TICK) || (encoder_value <= LIMIT_DOWN_IN_TICK))
+			{
+				break;
+			}
+
+			if (is_min_speed == 0)
+			{
+				is_move = 1;
+				if (encoder_value > (set_tick + TICK_FOR_RAMP_DOWN))
+				{
+					ramp = RAMP_UP;
+				} else
+				{
+					ramp = RAMP_DOWN;
+				}
+
+				if ((ramp != old_ramp) && (ramp == RAMP_DOWN))
+				{
+					timeout_for_ramp = 0;
+					time_for_change_ramp = 0;
+				}
+				old_ramp = ramp;
+
+				if ((timeout_for_ramp < INTERVAL_FOR_RAMP) && (time_for_change_ramp == TIME_FOR_CHANGE_RAMP))
+				{
+					time_for_change_ramp = 0;
+					Change_Speed(&speed, ramp);
+				}
+			}
+			//TODO save coord
 			Set_Inverter(BACK, speed);
+			Print_Current_Coord();
 		}
 	}
+	print_real_coord_time = 0;
+	is_move = 0;
+	timeout_for_ramp = 0;
+	time_for_change_ramp = 0;
 	arrange_out = 0;
 	Reset_LCD_Pointers();
 	Set_Inverter(STOP, 0);
@@ -1313,7 +1323,7 @@ void Move_Brush()
 
 	//Locks brush to fix it
 
-	real_coord = (float)encoder_value * ONE_ROTATION_VAL / 1000;
+	real_coord = (double)encoder_value * ONE_ROTATION_VAL / ONE_ROTATION_TICK;
 
 	//Saves real coordinate to backup register
 	Save_Coord(encoder_value);
@@ -1577,7 +1587,7 @@ void Check_Hand_Catch()
 
 		if (print_real_coord_time == TIMEOUT_PRINT_REAL) {
 			print_real_coord_time = 0;
-			real_coord = (float)encoder_value * ONE_ROTATION_VAL / 1000;
+			real_coord = (double)encoder_value * ONE_ROTATION_VAL / ONE_ROTATION_TICK;
 			Reset_LCD_Pointers();
 			Print_Coord(real_coord, REAL);
 		}
@@ -1585,7 +1595,7 @@ void Check_Hand_Catch()
 		if (hand_catch_detected == 1) {
 			hand_catch_detected = 0;
 			Brush_Lock();
-			real_coord = (float)encoder_value * ONE_ROTATION_VAL / 1000;
+			real_coord = (double)encoder_value * ONE_ROTATION_VAL / ONE_ROTATION_TICK;
 
 			//Prints real coordinate to LCD
 			Print_Coord(real_coord, REAL);
@@ -1602,19 +1612,16 @@ void Check_Hand_Catch()
 ///////////////////////////////////////////////////////////////////////////////
 //								Main Task									 //
 ///////////////////////////////////////////////////////////////////////////////
-void lcd_write()
-{
-	if (lcd_timeout == LCD_TIMEOUT) {
-		lcd_timeout = 0;
-		LCD_Write(LCD_ADDR);
-	}
-}
+
 uint8_t data = 0;
 
 void Main_Task()
 {
 	#ifndef TEST
-		lcd_write();
+		if (lcd_timeout == LCD_TIMEOUT) {
+			lcd_timeout = 0;
+			LCD_Write(LCD_ADDR);
+		}
 		state_machine();
 	#else
 		if (keypad_timeout == KEYPAD_TIMEOUT) {
@@ -1629,29 +1636,24 @@ void Main_Task()
 		if (data == 'A')
 		{
 			HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
-
-			if (encoder_value >= 1000)
-			{
-				encoder_value = 0;
-			}
+			encoder_value = 0;
 			while(encoder_value < 1000)
 			{
 				Set_Inverter(FORWARD, speed);
 			}
-			HAL_DAC_Stop(&hdac, DAC_CHANNEL_1);
 			Set_Inverter(STOP, speed);
-		} else if (data == 'B') {
+			HAL_DAC_Stop(&hdac, DAC_CHANNEL_1);
+
+		} else if (data == 'B')
+		{
 			HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
-			if (encoder_value <= 0)
-			{
-				encoder_value = 1000;
-			}
+			encoder_value = 1000;
 			while(encoder_value > 0)
 			{
 				Set_Inverter(BACK, speed);
 			}
-			HAL_DAC_Stop(&hdac, DAC_CHANNEL_1);
 			Set_Inverter(STOP, speed);
+			HAL_DAC_Stop(&hdac, DAC_CHANNEL_1);
 		}
 	#endif
 }
